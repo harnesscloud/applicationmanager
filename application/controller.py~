@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+#from application.utils.generator import Combinations
+from application.core.context.parser import ManifestParser, SLOParser
+from pprint import pprint
+from application.profiler.profiler import Profiler
+#from application.predictor.model import PerformanceModel
+from application.core.application import Application
+from slo import User
+from selection import SLOEnforcer
+
+import random, subprocess
+
+
+class Controller:
+	
+	@staticmethod
+	def run(slo):
+		#### LOADING SLOs ####
+		User.SLO = SLOParser.parse(slo)
+		#print User.SLO
+		######################
+		application = ManifestParser.load(User.SLO.ManifestUrl)
+		#print application.getVariableMap()
+		#print application.getVariables()
+		
+		if not application.hasPerformanceModel: 
+			
+			print "No Performance Model Found.\nRunning Profiling Process..."
+			"""
+				PROFILING
+			"""
+			profiler = Profiler(application)
+			profiler.run()
+		
+			"""
+				BUILD PERFORMANCE MODEL
+			"""
+			#performance_model = PerformanceModel()
+		
+		
+		"""
+			PROCESS SLOs
+		"""
+		manager = SLOEnforcer(application)
+		
+		
+		print "\nTHE END!"
+		

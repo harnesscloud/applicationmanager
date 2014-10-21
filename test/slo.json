@@ -1,0 +1,16 @@
+{
+    "SLO": {
+        "ManifestUrl": "http://public.rennes.grid5000.fr/~aiordache/harness/apps/rtm/manifest.json",
+        "ExecutionArgs": [
+            {
+                "Value": 500
+            }
+        ],
+        "Objective": {
+            "Constraints": [
+                "%budget <= 100"
+            ],
+            "Optimization": "%execution_time"
+        }
+    }
+}

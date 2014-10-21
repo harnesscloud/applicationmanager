@@ -1,0 +1,57 @@
+#!/usr/bin/env local
+from slo import User
+import matplotlib.pyplot as plt
+from application.utils.math import MathUtils
+class SLOEnforcer:
+    
+    def __init__(self, application):
+
+        """
+            Load mathematical model and check configurations
+        """
+        print "Load Performance Model"
+        
+        configurations = application.Modules[0].optimize_objectives(User.SLO)
+
+	i = 0
+	print "\n\n~~~ Results ~~~ "
+	for conf in configurations:
+	    #print "Conf :",conf, "\n"
+	    print "\n================================================================\n\t\tImplemention :", i, "\n================================================================\n"
+	    i = i + 1
+    	    allconfs, optconfs, best = conf
+	    #print "\tAll confs:",set(allconfs), "\n"
+	    print "\tOptimal confs:",optconfs, "\n"
+  	    print "\tBest Conf:",best, "\n"
+	    if best != None:
+	        print "=== PARETO FRONT ==="
+		print MathUtils.pareto_frontier_data(optconfs)
+		print "\nIf the objective is to optimize execution time, the first configuration of the Pareto front is to be selected, otherwise the last.\n"
+
+
+	i = 0
+	for conf in configurations:
+	    print "\n================================================================\n\t\tImplemention :", i, "\n================================================================\n"
+	    i =  i + 1
+    	    allconfs, optconfs, best = conf
+	    f = open("/home/aiordache/t%d.csv" % i, "w")
+	    print "\tAll confs:\n"
+	    l = []
+	    for c in allconfs:
+		l.append("%d,%f,%f\n" % (c[0]["%numCores"], c[1], c[2]))
+		print l[-1][:-2]
+	    f.writelines(l)
+	    f.close()
+
+        return
+
+
+
+
+
+
+
+
+
+
+        

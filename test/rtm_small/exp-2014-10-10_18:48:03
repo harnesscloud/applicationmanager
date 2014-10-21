@@ -1,0 +1,1 @@
+{"Configuration": {"%master_ram": 32768, "%master_cores": 6}, "RuntimeData": {"Usage": [], "STDOUT": "None"}, "Arguments": {"%arg1": "~/rtm/tests/rtm_parameters_small.txt"}, "Results": {"TotalCost": 0.658190526008606, "ExeTime": 219.39684200286865}}

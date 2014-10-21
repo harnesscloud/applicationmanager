@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+import os, sys
+import json
+ 
+""" 
+    Transform new log format in old log format
+"""
+if len(sys.argv) < 2:
+	print "Provide the path to the exp folder."
+	sys.exit()
+	
+path = sys.argv[1]
+ 
+exps = map(lambda p: os.path.join(path, p),os.listdir(path))
+#print exps
+
+experiment_list = []
+for exp in exps:
+    e = open(exp, "r").read()
+    e = json.loads(e)
+    
+    try:
+		e["Results"]["TotalCost"]
+		e["Results"]["ExeTime"]
+		e["RuntimeData"]["Usage"][0]
+		if e["Configuration"]["%master_cores"] < 4:
+			raise Exception()
+		if "large" in e["Arguments"]["%arg1"]: 
+			raise Exception()
+    except:	
+        #print "ignore file...corrupt : ", e["Configuration"]
+        continue
+    experiment_list.append(e)
+    
+f = open("model.json", "w")
+f.write(unicode(json.dumps({ "PerformanceModel" : [experiment_list]}, ensure_ascii=False)))
+f.close()
+    

@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+#import pxssh
+import sys
+
+import httplib2
+def get_utilization(machines):
+    
+    util_data = []
+    for host in machines:
+       d, response = httplib2.Http().request('http://%s:9292' % host,
+                     'POST',
+                     None,
+                     headers={'Content-Type': 'application/json'})
+    
+       #print "MonD response   = ",response
+       
+       util_data.append(response)
+    return util_data
+
+class RemoteConnection:
+    
+    def __init__(self, devicetype = "VM", environ_vars = {}):
+        """
+            Constructor.
+            
+            Connection protocol is different depending on the resource type we are trying to connect to
+        """
+        self.type = devicetype 
+        self.env_vars = environ_vars
+            
+    
+    def run(self, host, cmd = None, script = None, user = "root"):
+        output = None
+        
+        print "\nExecuting",cmd,"on",host
+        print "EnvironVars :", self.env_vars
+        return
+    
+        if self.type == "VM":
+            conn = pxssh.pxssh() 
+            if not conn.login (host, user, login_timeout = None):
+                print "SSH session failed on site %s." % host
+                print str(self.conn)
+                sys.exit(1)
+            
+            cmd_to_execute = ";".join(["export %s=%s" % (key, self.env_vars[key]) for key in self.env_vars])
+            if cmd != None:
+                cmd_to_execute = cmd_to_execute + ";" + cmd
+            else:
+                f = script.split("/")[-1]
+                cmd_to_execute = cmd_to_execute + ";" + ";".join(["wget %s" % script, "chmod +x %s" % f, ". %s" % f])
+            cmd_to_execute = cmd_to_execute.strip(";")
+            print "Executing :", cmd_to_execute
+            conn.sendline(cmd_to_execute)
+            conn.prompt(timeout = None)
+            output = conn.before[:]
+            #print "output :", output
+            conn.logout()
+            del conn
+        elif self.contype == "STORAGE":
+            pass
+        else:
+            pass
+        
+        return output
