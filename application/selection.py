@@ -70,16 +70,23 @@ class SLOEnforcer:
 			#run the app
 			print "Selecting implementation %s for execution." % self.application.Modules[0].Implementations[conf["ImplIndex"]].ImplementationName
 			try:
-				results = self.execute_application(conf)
+				variables = {}
+				variables.update(conf["Configuration"])
+				variables.update(conf["Arguments"])
+				variables["ImplIndex"] = conf["ImplIndex"]
+				
+				results = self.execute_application(variables)
 				break
 			except:
+				import traceback
+				traceback.print_exc()
 				print "Execution on", conf["Configuration"], " failed. Probably resource reservation was not possible. Try another one."
 				experiments = filter(lambda c : c != conf, experiments)
 				print len(experiments)
 				conf = None
 				if experiments == []:
 					break
-				
+			#break
 		
 		if conf == None:
 			print "Failed satisfying SLOs with the provided PM."
@@ -111,6 +118,7 @@ class SLOEnforcer:
 			
 
 	def execute_application(self, configuration):
+		variables = configuration
 		implementation = self.application.Modules[0].Implementations[configuration["ImplIndex"]]
 		del configuration["ImplIndex"]
 		configuration, roles = implementation.Resources.get_configuration(configuration)
@@ -133,7 +141,6 @@ class SLOEnforcer:
 		""""
 			Execute Implementation
 		"""
-		variables.update(args)
 		#get manifest special variables, environment variables
 		variables.update(implementation.Resources.get_special_variables(reservation["Resources"]))
 		
