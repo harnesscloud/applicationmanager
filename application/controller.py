@@ -70,8 +70,27 @@ class Controller:
 #########################################################
 ########		TEST ONLY                        ########
 #########################################################
-		
+
 slo = {
+    "SLO": {
+        "ManifestUrl": "http://public.rennes.grid5000.fr/~aiordache/harness/apps/rtm/manifest.json", #"/home/anca/Desktop/Code/test/manifest.json",
+        "PerformanceModel" : "/home/aiordache/AM/test/model.json",#"/home/anca/Desktop/Code/test/model.json",
+        "ExecutionArgs": [
+            {
+                "Value": 500
+            }
+        ],
+        "Objective": {
+            "Constraints": [
+                "%budget <= 100"
+            ],
+            "Optimization": "%execution_time"
+        }
+    }
+}
+
+
+slo_local_test = {
     "SLO": {
         "ManifestUrl": "/home/anca/Desktop/Code/test/manifest.json",
         "PerformanceModel" : "/home/anca/Desktop/Code/test/model.json",
@@ -89,7 +108,8 @@ slo = {
     }
 }
 
-Controller.run(slo)
+
+Controller.run(slo)#_local_test)
 	
 
 
