@@ -100,22 +100,6 @@ class ModellingMethod:
 				#can't detect the bottleneck from the utilisation 
 				print "Unknown failure."
 				self.testing_set = self.testing_set[1:]	
-				
-				pos = [0] * len(var_order)
-				#run additional experiments to identify the bottleneck
-				for variable in var_order:
-					#get a higher value for the bottleneck resource
-					nconf = copy.deepcopy(conf_to_test)
-					nconf[variable] = self.mapper.get_next_value_from(variable, conf_to_test[variable])
-					#run the new conf
-					success, var_order, cost, et, direction, monitor = self.app_execution_function_call(nconf)
-					print success
-					if success["Success"]:
-						self.training_set.append(solution({"conf" : conf_to_test, "x" : None, "cost" : cost, "et" : et, "gradient" : direction, "monitor" : monitor, "success" : success["Success"]}))
-						self.iterations += 1
-					else:
-
-				
 				return	
 				
 			#derive the new configuration
