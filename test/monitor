@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+import string
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import subprocess
+
+cmd = "lsof -i:9292 | grep 'python' | awk '{ print $(NF-8) }'"
+outp = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip()
+#outp = commands.getoutput(cmd).strip() 
+
+if not (outp in [None, ""]):
+	port = int(outp)
+	subprocess.Popen("kill -9 %d" % port, shell=True, stdout=subprocess.PIPE).wait()
+	#commands.getoutput("kill -9 %d" % port)
+
+class MyHandler(BaseHTTPRequestHandler):
+
+	def _process_request(self):
+		try:
+			#get cpu utilization
+			cmd = """top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id,*/\\1/" | awk '{print $1}'"""
+
+			cpu_util = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip() #commands.getoutput(cmd)
+			output = {"Cores" : float("{0:.2f}".format(100.0 - float(cpu_util))) }
+
+			#get mem utilization
+			cmd = """top -bn1 | grep "Mem:" | sed "s/.*, *\([0-9.]*\)%* used,*/\\1/" | awk '{print $1}'"""
+			mem_used = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip() #commands.getoutput(cmd)
+
+			#get mem utilization
+			cmd = """top -bn 1 | grep Mem: | awk '{ print $(NF-7) }'"""
+			mem_total = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip()#commands.getoutput(cmd)
+			mem_total = mem_total.replace("k", "")
+			print mem_used, mem_total
+			output["Memory"] = float("{0:.2f}".format((100.0 * float(mem_used)) / float(mem_total)))
+
+
+			#Swap memory usage
+			cmd ="""top -bn 1 | grep Swap: | awk '{ print $(NF-7) }'"""
+			swap_total = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip()#commands.getoutput(cmd)
+			swap_total = swap_total.replace("k", "")
+			st = int(swap_total)
+			cmd ="""top -bn 1 | grep Swap: | awk '{ print $(NF-5) }'"""
+			used_swap = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip()#commands.getoutput(cmd)
+			used_swap = used_swap.replace("k", "")
+			us = float(used_swap)
+			if st == 0:
+				output["Swap"] = 0.0
+			else:
+				output["Swap"] = float("{0:.2f}".format((100.0 * us) / st))
+
+			self.send_response(200)
+			self.send_header('Content-type',	'text/html')
+			self.end_headers()
+			self.wfile.write(output)                
+		except:
+			#traceback.print_exc()
+			self.send_error(404,'Error in executing top')
+
+
+	def do_GET(self):
+		self._process_request()
+		
+	def do_POST(self):
+		self._process_request()
+		
+		
+
+def main():
+    try:
+        server = HTTPServer(('', 9292), MyHandler)
+        print 'started httpserver... port 9292'
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print '^C received, shutting down server'
+        server.socket.close()
+
+if __name__ == '__main__':
+    main()
+

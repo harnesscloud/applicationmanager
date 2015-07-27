@@ -43,38 +43,9 @@ class CloudClient:
         r = self._request(data)
         return r
 
-class CostModel:
 
-    #cpu_cost = 0.04 #eurocents per Ghz
-    c_ram = 0.0186323 #eurocents per GB
-    c_cores = 0.0396801 #eurocents per core
-    C = 0.0417027
-
-    @staticmethod
-    def vm_cost_per_hour(attrs = {}):
-        """
-            Currently, only the num of cores and the RAM are considered
-        """
-        cost = 0
-        for attr in attrs:
-            if attr.upper() == "RAM" :
-                cost = cost + CostModel.c_ram * attrs[attr] / 1024.0
-            elif attr.upper() == "CORES" :
-                cost = cost + CostModel.c_cores * attrs[attr]
-
-        cost =  cost + CostModel.C
-        return cost
-
-    @staticmethod
-    def conf_cost_per_hour(machines = []):
-        total_cost = 0
-        for vm in machines:
-            total_cost = total_cost  + CostModel.vm_cost_per_hour(vm)
-        return total_cost
-
-
-
-conn = CloudClient(sys.argv[1])
+frontend = open("frontend").read().strip()
+conn = CloudClient(frontend)
 
 reservations = {}
 
@@ -98,68 +69,58 @@ class Server(resource.Resource):
 		#print "action =", action
 		#print "data :", data, "\n"
 		response = {}
-		if action == "/prepareReservation":
-			print "Prepare Reservation : ", data
+		if action == "/createReservation":
+			print "Create Reservation : ", data
 			extended_list = []
-			for gr in data["Resources"]:
-				del gr["GroupID"]
-				num = gr["NumInstances"]
-				del gr["NumInstances"]
-				for i in range(num):
-					extended_list.append(copy.deepcopy(gr))  
-			response = {
-			   "ConfigID"  : str(uuid.uuid1()),
-			   "Cost"      : 0.003,
-			   "Resources" : extended_list            
-			}
-			reservations[response["ConfigID"]] = extended_list
-			print "Response : ", response
+			for gr in data["Allocation"]:
+				if gr["Type"] == "Machine":
+					if "NumInstances" in gr.keys():
+						num = gr["NumInstances"]
+					else:
+						num = 1		
+					for i in range(num):
+						extended_list.append(copy.deepcopy(gr["Attributes"]))  
+				
+			rid = str(uuid.uuid1())
+			reservations[rid] = extended_list
 			
-		elif action == "/getResourceTypes":
-			response = {}
+			for r in reservations[rid]:    
+				r["name"] = (str(uuid.uuid1())).replace("-", "")
+				print "Creating VM with :", r
+				result = conn.create_vm(r)
+				r["ID"] = result["ID"]
+				r["IP"] = result["IP"]
 			
-		elif action == "/getMonitoringInfo":
-			response = {}
+			response  = {"ReservationID" :[rid] }
+			
 		elif action == "/checkReservation":
-			rid = data["ResID"]
+			rid = data["ReservationID"][0]
 			#retrieve machine state
 			ready = True
 			
 			for r in reservations[rid]:
-				ready = (ready and (conn.get_state(id_vm = r["Attributes"]["ID"])["STATE"] == "RUNNING")) 
-			response = {"Ready" : ready}
+				ready = (ready and (conn.get_state(id_vm = r["ID"])["STATE"] == "RUNNING")) 
+			response = {"Instances" : { rid : {"Ready" : ready}}}
 			if ready:
-				response["Addresses"] = map(lambda r : r["Attributes"]["IP"], reservations[rid])
+				response["Instances"][rid]["Address"] = map(lambda r : r["IP"], reservations[rid])
 				print "Check Reservation : Ready"
 
-		elif action == "/createReservation":
-			print "Create Reservation : ", data
-			for r in reservations[data["ConfigID"]]:    
-				r["Attributes"]["name"] = (str(uuid.uuid1())).replace("-", "")
-				print "Creating VM with :", r["Attributes"]
-				result = conn.create_vm(r["Attributes"])
-
-				r["Attributes"]["ID"] = result["ID"]
-				r["Attributes"]["IP"] = result["IP"]
-				
-			response = { "ResID": data["ConfigID"] }
-			print response
-
 		elif action == "/releaseReservation":
-			print "Release reservation : ",reservations[data["ResID"]]
-			for r in reservations[data["ResID"]]:
-				conn.destroy_vm(r["Attributes"]["ID"])
-			del reservations[data["ResID"]]
+			rid = data["ReservationID"][0]
+			print "Release reservation : ",reservations[rid]
+			for r in reservations[rid]:
+				conn.destroy_vm(r["ID"])
+			del reservations[rid]
 			response = {}
+			
 		elif action == "/reset":
 			print "Reset."
 			for r in reservations.values():
 				for c in r:
-					conn.destroy_vm(c["Attributes"]["ID"])
+					conn.destroy_vm(c["ID"])
 			reservations = {}
 			
-		#print "response : ", response
-		response = {"result" : response}
+		#print "Response : ", response
 		return simplejson.dumps(response)
             
     def render_POST(self, request):
@@ -179,6 +140,9 @@ def start_application_manager(port = 5558):
 
 
 if __name__ == '__main__':
-    
-    start_application_manager()
+	try:
+		port = int(sys.argv[1])
+	except:
+		port = 5558
+	start_application_manager(port)
     
