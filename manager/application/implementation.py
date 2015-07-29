@@ -61,7 +61,7 @@ class Implementation(Base):
 		
 		for v in variables:
 			if v in arg_str:
-				arg_str = arg_str.replace(v, variables[v])
+				arg_str = arg_str.replace(v, str(variables[v]))
 		return arg_str
 		
 	def __process_environ_vars(self, machines, variables):

@@ -6,6 +6,7 @@ from manager.state import State
 from manager.executor import Executor
 
 import sys, os, json, traceback
+from config import config_parser
 
 class Profiler:
 	StateID = 0
@@ -13,6 +14,7 @@ class Profiler:
 		self.application = application
 		self.strategy    = None
 		self.version     = version
+		self.iterations = config_parser.getint("main", "iterations")
 		self.version_indexes = map(lambda x: int(x), version.split("."))
 		
 		#print self.version_indexes
@@ -23,7 +25,7 @@ class Profiler:
 		
 		self.mapper = VariableMapper(self.application.getResourceVariableMap(self.version_indexes))
 		
-		self.strategy = DirectedSimulatedAnnealing(self.execute_application, len(self.variables), VariableMapper.Interval[0], VariableMapper.Interval[1])
+		self.strategy = DirectedSimulatedAnnealing(self.execute_application, len(self.variables), VariableMapper.Interval[0], VariableMapper.Interval[1], max_eval = self.iterations)
 		data = self.restore()
 		if data == [] and self.parameters != {}:
 			#to init state

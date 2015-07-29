@@ -2,6 +2,7 @@
 import httplib2, json, sys, os
 import threading, subprocess, time
 from manager.resources.connection import RemoteConnection
+from config import config_parser
 
 class UtilizationDataThread(threading.Thread):
 
@@ -67,7 +68,7 @@ class Monitor:
 		
 		addrs = []
 		for machine in self.resources:
-			cmd = "wget http://public.rennes.grid5000.fr/~aiordache/harness/monitor;chmod +x monitor;nohup python monitor < /dev/null &> /dev/null &"
+			cmd = "wget %s;chmod +x monitor;nohup python monitor < /dev/null &> /dev/null &" % config_parser.get("main", "monitor_url")
 			if machine["Type"] in ["Machine", "VM"]:
 				conn.run(machine["Address"], cmd)
 				addrs.append(machine["Address"])

@@ -183,7 +183,7 @@ class ModellingMethod:
 			exps.extend(pex[:num/3])
 			exps.extend(pex[num/3:])
 			
-		while len(exps) < num and len(exps) <= len(self.profiling_solutions):
+		while len(exps) < num and len(exps) < len(self.profiling_solutions):
 			left_exps = filter(lambda e: not(e["conf"] in map(lambda x:x["conf"], exps)), self.profiling_solutions)
 			e = left_exps[random.randint(0,len(left_exps ) - 1)]
 			#print map(lambda x:x["Configuration"], pex)

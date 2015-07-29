@@ -4,14 +4,14 @@ import sys
 import time
 
 import paramiko
-
+from config import config_parser
 class RemoteConnection:
     
     def __init__(self, environ_vars = {}):
         self.env_vars = environ_vars
-        paramiko.util.log_to_file('/home/aiordache/.logs/am_ssh.log') 
+        paramiko.util.log_to_file('/tmp/am_ssh.log') 
     
-    def run(self, host, cmd = None, script = None, user = "root"):
+    def run(self, host, cmd = None, script = None, user = config_parser.get("main", "agent_user")):
 		#output = None
 		ssh = paramiko.SSHClient()
 		ssh.load_system_host_keys()
@@ -20,7 +20,7 @@ class RemoteConnection:
 		#print "Connecting to ", host 
 		while(tries > 0):
 			try:	
-				ssh.connect(host, username = user)
+				ssh.connect(host, username = user, password = config_parser.get("main", "agent_password"))
 				#print "Success"
 				break;
 			except:

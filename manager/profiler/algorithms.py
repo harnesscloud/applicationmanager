@@ -11,7 +11,7 @@ class Algorithm:
 		self.interval = {"lower" : lower, "upper" : upper}
 		self.solutions = []
 		self.max_evals = max_eval
-		self.init_steps = init_steps
+		self.adjust_initsteps(init_steps)
 		self.already_tested = already_found_test
 		self.x_size = x_size
 		self.init_parameters()
@@ -49,6 +49,14 @@ class Algorithm:
 
 	def stop_condition(self):
 		raise NotImplementedError
+
+	def adjust_initsteps(self, init_steps):
+		if self.max_evals < 3:
+			self.init_steps = 0
+		elif self.max_evals < 7:
+			self.init_steps = self.max_evals - 1
+		else:
+			self.init_steps = init_steps
 		
 		
 class SimulatedAnnealing(Algorithm):
@@ -95,7 +103,9 @@ class SimulatedAnnealing(Algorithm):
 
 	def check_state(self):
 		if not self.T:
-			if self.iterations >= self.init_steps:
+			if self.init_steps == 0:
+				self.init_default_temp()
+			elif self.iterations >= self.init_steps:
 				self.init_temp()
 				
 	def stop_condition(self):
@@ -117,6 +127,12 @@ class SimulatedAnnealing(Algorithm):
 			self.Tf = 1e-12
 		return True
 	
+	def init_default_temp(self):
+		self.T0 = 100
+		self.T = self.T0
+		self.Tf = 1e-12
+
+
 	def update_temperature(self):
 		#algorithm finishes when reaching the cool temperature Tf
 		print "T =", self.T, " T0 =",self.T0, " Tf =",self.Tf

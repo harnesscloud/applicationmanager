@@ -7,6 +7,7 @@ import httplib2
 import simplejson
 
 import thread
+from config import config_parser
 
 class SingletonParent(object):
     """
@@ -54,7 +55,7 @@ class SingletonParent(object):
         
     
 class CrossResourceSchedulerConnection(SingletonParent):
-    def __init__(self, url = "http://localhost:5558"): #for development use the 2nd CRS instance, the first is running profiling
+    def __init__(self, url = config_parser.get("main", "crs_url")): #for development use the 2nd CRS instance, the first is running profiling
         SingletonParent.__init__(self)
         self.conn = httplib2.Http()
         self.url = url 
@@ -105,8 +106,8 @@ class ReservationManager:
 		reservationID = ReservationManager.__create_reservation(configuration)  
 		addresses = ReservationManager.__check_reservation(reservationID)
 		
-		print "Sleep 120s while machines are booting."
-		time.sleep(140)	
+		print "Sleep 3s while machines are booting."
+		time.sleep(3)	
 		return {"ReservationID" : reservationID, "Addresses" : addresses}
 
 	@staticmethod

@@ -22,6 +22,7 @@ from manager.application.search_space import VariableMapper
 from manager.state import State
 
 import  subprocess, traceback
+from config import config_parser
 
 class Controller:
 	application = None
@@ -120,8 +121,7 @@ class Controller:
 if len(sys.argv) > 1:
 	s = sys.argv[1]
 else:
-	print "./controller <url-to-slo>"
-	sys.exit()
+	s = config_parser.get("main", "slo_url")
 	
 Controller.load(s)
 Controller.run()
