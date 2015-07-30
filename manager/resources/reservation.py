@@ -68,16 +68,25 @@ class CrossResourceSchedulerConnection(SingletonParent):
                           headers={'Content-Type': 'application/json'})
         try:
             response = simplejson.loads(response)
+            print "response: %s" % response
+            if  'result' not in response:
+            	raise Exception(response['error']['message'])
+            else:
+            	response = response['result']
+            	
         except:
             print traceback.print_exc()
-            return response
+            sys.exit()
+            # return response
         
         #print "Response :", response
         return response
     
     
     def createReservation(self, configuration):
+		# print configuration
 		response = self.__make_request("/createReservation", {"Allocation" : configuration})
+		# print response
 		return response["ReservationID"][0]
 
     def releaseReservation(self, reservationID):
@@ -106,8 +115,8 @@ class ReservationManager:
 		reservationID = ReservationManager.__create_reservation(configuration)  
 		addresses = ReservationManager.__check_reservation(reservationID)
 		
-		print "Sleep 3s while machines are booting."
-		time.sleep(3)	
+		# print "Sleep 3s while machines are booting."
+		# time.sleep(3)	
 		return {"ReservationID" : reservationID, "Addresses" : addresses}
 
 	@staticmethod

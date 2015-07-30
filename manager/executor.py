@@ -13,7 +13,7 @@ class Executor:
 		#print roles
 		#print configuration
 		reservation = ReservationManager.reserve(configuration)
-		#print "Reservation ready :", reservation
+		print "Reservation ready :", reservation
 		
 		for i in range(len(configuration)):
 			configuration[i]["Address"] = reservation["Addresses"][i]

@@ -68,7 +68,7 @@ class Monitor:
 		
 		addrs = []
 		for machine in self.resources:
-			cmd = "wget %s;chmod +x monitor;nohup python monitor < /dev/null &> /dev/null &" % config_parser.get("main", "monitor_url")
+			cmd = "curl -O %s;chmod +x monitor;nohup python monitor < /dev/null &> /dev/null &" % config_parser.get("main", "monitor_url")
 			if machine["Type"] in ["Machine", "VM"]:
 				conn.run(machine["Address"], cmd)
 				addrs.append(machine["Address"])

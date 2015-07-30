@@ -103,7 +103,7 @@ class Implementation(Base):
 		conn = RemoteConnection(environ_vars = env_vars)
 		#print "Run deployment scripts."    
 		#general cmds
-		cmds = ["wget %s" % self.Tarball, "tar xzf %s" % self.Tarball.split("/")[-1]]
+		cmds = ["curl -O %s" % self.Tarball, "tar xzf %s" % self.Tarball.split("/")[-1]]
 
 		cmds.extend(["chmod +x init.sh", "chmod +x start.sh"])
 

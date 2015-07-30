@@ -21,7 +21,7 @@ class RemoteConnection:
 		while(tries > 0):
 			try:	
 				ssh.connect(host, username = user, password = config_parser.get("main", "agent_password"))
-				#print "Success"
+				print "Success"
 				break;
 			except:
 				tries = tries - 1;
@@ -35,7 +35,7 @@ class RemoteConnection:
 			cmd_to_execute = cmd_to_execute + ";" + cmd
 		else:
 			f = script.split("/")[-1]
-			cmd_to_execute = cmd_to_execute + ";" + ";".join(["wget %s" % script, "chmod +x %s" % f, ". %s" % f])
+			cmd_to_execute = cmd_to_execute + ";" + ";".join(["curl -O %s" % script, "chmod +x %s" % f, ". %s" % f])
 		cmd_to_execute = cmd_to_execute.strip(";")
 		#print "Executing :", cmd_to_execute, " on ", host
 		ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
