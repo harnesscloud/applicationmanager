@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import time
+import time, copy
 import subprocess
 import os, sys, traceback
 from pprint import pprint
@@ -60,15 +60,15 @@ class CrossResourceSchedulerConnection(SingletonParent):
         self.conn = httplib2.Http()
         self.url = url 
         
-    def __make_request(self, url, content = {}):
+    def __make_request(self, url, method = 'POST', content = {}):
         #print "Conn ID =", id(self)
         #print "\nRequest :", url, content
-        data, response = self.conn.request(self.url + url , 'POST',
+        data, response = self.conn.request(self.url + url , method,
                           simplejson.dumps(content),
                           headers={'Content-Type': 'application/json'})
         try:
+            print "DEBUG: response: %s" % response
             response = simplejson.loads(response)
-            print "response: %s" % response
             if  'result' not in response:
             	raise Exception(response['error']['message'])
             else:
@@ -83,21 +83,28 @@ class CrossResourceSchedulerConnection(SingletonParent):
         return response
     
     
-    def createReservation(self, configuration):
-		# print configuration
-		response = self.__make_request("/createReservation", {"Allocation" : configuration})
-		# print response
-		return response["ReservationID"][0]
+    def createReservation(self, configuration, monitor):
+        data = {}
+        data['Allocation'] = configuration
+        if len(monitor) > 0:
+        	data['Monitor'] = monitor
+
+        print "DEBUG: reservation REQ: %s" % data
+        response = self.__make_request("/createReservation", content=data)
+        return response["ReservationID"][0]
 
     def releaseReservation(self, reservationID):
-        response = self.__make_request("/releaseReservation", {"ReservationID" : [reservationID]})
+        response = self.__make_request("/releaseReservation",method="DELETE", content={"ReservationID" : [reservationID]})
         if response is {}:
             return True
     
     def checkReservation(self, reservationID):
-        response = self.__make_request("/checkReservation", {"ReservationID" : [reservationID]})
+        response = self.__make_request("/checkReservation", content={"ReservationID" : [reservationID]})
         return response
-        
+    
+    def getMetrics(self, reservationID, address, entry=1):
+    	response = self.__make_request("/getMetrics", content={"ReservationID" : reservationID, "Address":address, "Entry":entry})
+        return response
         
     #for development only
     def reset(self):
@@ -109,10 +116,14 @@ class CrossResourceSchedulerConnection(SingletonParent):
 class ReservationManager:
     
 	@staticmethod
-	def reserve(configuration):
+	def reserve(configuration, monitor):
 		"Reserve resource configuration."
-		
-		reservationID = ReservationManager.__create_reservation(configuration)  
+		conf_copy  = copy.deepcopy(configuration)
+		for dev in conf_copy:
+			if dev['Type'] == 'Machine':
+				dev['Attributes']['Image'] = config_parser.get("main", "agent_image")
+
+		reservationID = ReservationManager.__create_reservation(conf_copy, monitor)  
 		addresses = ReservationManager.__check_reservation(reservationID)
 		
 		# print "Sleep 3s while machines are booting."
@@ -134,11 +145,19 @@ class ReservationManager:
 		provisioner = CrossResourceSchedulerConnection()
 		provisioner.reset()
 
+	@staticmethod
+	def monitor(reservationID, address):
+		provisioner = CrossResourceSchedulerConnection()
+		result = provisioner.getMetrics(reservationID, address)
+		if result == None:
+			raise Exception()
+		return result['Metrics']	
+
 
 	@staticmethod
-	def __create_reservation(configuration):
+	def __create_reservation(configuration, monitor):
 		provisioner = CrossResourceSchedulerConnection()
-		result = provisioner.createReservation(configuration)
+		result = provisioner.createReservation(configuration, monitor)
 		if result == None:
 			raise Exception()
 		return result

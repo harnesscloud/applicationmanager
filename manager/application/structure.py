@@ -5,6 +5,7 @@ from manager.application.elements.parameters import Parameter
 
 from manager.utils.math_utils import MathUtils
 
+
 class Module(Base):
     accepted_params = [
 			{
@@ -93,10 +94,14 @@ class Application(Base):
 		roles = []
 		for i in range(len(version)):
 			selected_implementation = version[i]
-			role, subconf = self.Modules[i].Implementations[selected_implementation].Resources.get_configuration(variables)
+			subconf, role = self.Modules[i].Implementations[selected_implementation].Resources.get_configuration(variables)
+			# for dev in subconf:
+			# 	if dev['Type'] == 'Machine':
+			# 		dev['Attributes']['Image'] = config_parser.get("main", "agent_image")
+			# print "DEBUG: subconf: %s" % (subconf)	
 			configuration.extend(subconf)
 			roles.extend(role)
-		
+		# print "DEBUG: configuration: %s, roles: %s" % (configuration,roles)
 		return (configuration, roles)
 		
 	

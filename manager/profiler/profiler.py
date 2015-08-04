@@ -25,6 +25,7 @@ class Profiler:
 		
 		self.mapper = VariableMapper(self.application.getResourceVariableMap(self.version_indexes))
 		
+
 		self.strategy = DirectedSimulatedAnnealing(self.execute_application, len(self.variables), VariableMapper.Interval[0], VariableMapper.Interval[1], max_eval = self.iterations)
 		data = self.restore()
 		if data == [] and self.parameters != {}:

@@ -162,7 +162,7 @@ class SLOEnforcer:
 			
 			#update the cost
 			for c in data:
-				_, conf = self.application.getResourceConfiguration(version, c["conf"])
+				conf, _  = self.application.getResourceConfiguration(version, c["conf"])
 				print conf
 				
 				cost = CostModel.calculate(conf)
