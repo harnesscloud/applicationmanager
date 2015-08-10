@@ -129,14 +129,14 @@ class Monitor:
             for attr in info[addr]:
                 values = []
                 all_vals = info[addr][attr]
-                lines = all_vals.split(',')
-                for i in range(0,len(lines),3):
-                    values.append(float(lines[i+2]))
-                # lines = all_vals.split('\n')
-                # for line in lines:
-                #     vals = line.split(',')
-                #     if len(vals) > 1:
-                #         values.append(float(vals[2]))
+                # lines = all_vals.split(',')
+                # for i in range(0,len(lines),3):
+                #     values.append(float(lines[i+2]))
+                lines = all_vals.split('\n')
+                for line in lines:
+                    vals = line.split(',')
+                    if len(vals) > 1:
+                        values.append(float(vals[2]))
                 info[addr][attr] = values
 
             cpu_util = self.calculateCpuUsage(info[addr]['CPU_U_S_TIME'], info[addr]['CPU_TOT_TIME'])
