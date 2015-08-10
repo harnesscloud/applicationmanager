@@ -28,7 +28,7 @@ class Executor:
 			
 			#start monitoring
 			monitor.setup(configuration, reservation['ReservationID'])
-			monitor.run()
+			# monitor.run()
 			
 			print "\nExecuting application on the following resources :\n", configuration, "\n"
 
@@ -36,9 +36,9 @@ class Executor:
 			successful_execution, execution_time = application.execute(version_indexes, configuration[:], all_variables)
 			
 			
-			monitor.get_monitoing()
+			recommendation, utilisation = monitor.get_monitoing()
 			#stop monitoring
-			recommendation, utilisation = monitor.stop()
+			# recommendation, utilisation = monitor.stop()
 			
 			bottlenecks = monitor.get_bottleneck(utilisation)
 				
