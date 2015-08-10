@@ -128,7 +128,7 @@ class Monitor:
         for addr in info:
             for attr in info[addr]:
                 values = []
-                all_vals = info[addr][attr]
+                all_vals = info[addr][attr].strip('\n')
                 # lines = all_vals.split(',')
                 # for i in range(0,len(lines),3):
                 #     values.append(float(lines[i+2]))
@@ -173,6 +173,7 @@ class Monitor:
                      recommendation[addr][attr] = 0
 
         print "\ncrs_direction :", recommendation
+        return recommendation
 
     # def process_usage(self, data = []):
     #     result = {}
