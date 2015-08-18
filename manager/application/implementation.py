@@ -5,7 +5,7 @@ from manager.resources.connection import RemoteConnection
 from manager.utils.monitor import MonitorDataThread
 from manager.application.elements.resources import Resources
 
-import time, sys, os
+import time, sys, os, simplejson
 
 class Implementation(Base):
 	accepted_params = [
@@ -95,6 +95,8 @@ class Implementation(Base):
 		print "....... Application Deployment ......."
 		env_vars = self.__process_environ_vars(machines, variables)
 		
+		instances={}
+		instances['Instances'] = machines
 		#don't want to see experiments trace in the output
 		#redirect to null 
 		backup = sys.stdout
@@ -104,6 +106,7 @@ class Implementation(Base):
 		#print "Run deployment scripts."    
 		#general cmds
 		cmds = ["curl -O %s" % self.Tarball, "tar xzf %s" % self.Tarball.split("/")[-1]]
+		cmds.extend(["mkdir -p /var/cache/harness/;", "echo '%s' > /var/cache/harness/instances.json" % simplejson.dumps(instances)])
 
 		cmds.extend(["chmod +x init.sh", "chmod +x start.sh"])
 
