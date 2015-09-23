@@ -21,12 +21,9 @@ class Extrapolator:
 		self.variables 	 = variables
 		
 		self.newinput = input_size
-		print "Variabile in extrapolator :", self.variables
+		print "Variables in extrapolator :", self.variables
 		self.mapper = VariableMapper(self.application.getResourceVariableMap(self.version_indexes))
-		#self.keys = self.application.getResourceVar2KeyMap(self.version_indexes)
-		
-		#print self.keys
-		
+	
 		self.strategy = ModellingMethod(self.benchmark_solutions, self.execute_application, self.mapper, self.benchmark_input) #
 		data = self.restore()
 		if data == []:
@@ -124,7 +121,7 @@ class Extrapolator:
 		
 		print gradient
 		#execute application should return the variables, cost and time of execution and feedback based on monitoring
-		return (success,self.variables, cost, execution_time, gradient, utilisation)
+		return (success, self.variables, cost, execution_time, gradient, utilisation)
 		
 		
 		

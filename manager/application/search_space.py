@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from pprint import pprint
+from pprint import pprint, pformat
 import random
 from manager.application.base import Base
 
@@ -114,13 +114,38 @@ class VariableMapper:
 			
 			key = filter(lambda k: k != "Discrete", varr.keys())[0]
 			self.vars[key] = {"Continuous" : not(varr["Discrete"]), "Values" : varr[key], "Type" : type(varr[key][0])}
+			self.update(key)
 			
-			#compute unit
-			if self.vars[key]["Continuous"]:
-				self.vars[key]["unit"] = (self.Interval[1] - self.Interval[0])/(self.vars[key]["Values"][-1] - self.vars[key]["Values"][0] + 1)
+	def update(self, key):	
+		#compute unit
+		if self.vars[key]["Continuous"]:
+			if len(self.vars[key]["Values"]) > 2:
+				self.vars[key]["step"] = self.vars[key]["Values"][-1]
+				self.vars[key]["Values"] = self.vars[key]["Values"][:-1]
 			else:
-				self.vars[key]["unit"] = (self.Interval[1] - self.Interval[0])/len(self.vars[key]["Values"])
+				if type(self.vars[key]["Values"][0]) == int:
+					self.vars[key]["step"] = 1
+				else:
+					self.vars[key]["step"] = 100./(self.vars[key]["Values"][-1] - self.vars[key]["Values"][0])
+					
+			self.vars[key]["unit"] = (self.Interval[1] - self.Interval[0])/((self.vars[key]["Values"][-1] - self.vars[key]["Values"][0])/self.vars[key]["step"])#(self.vars[key]["Values"][-1] - self.vars[key]["Values"][0] + 1)
 			
+		else:
+			self.vars[key]["step"] = 1
+			self.vars[key]["unit"] = (self.Interval[1] - self.Interval[0])/len(self.vars[key]["Values"])
+		
+	def limit(self, limits):
+		for key in limits:
+			value = self.get_next_value_from(key, limits[key])
+			if self.vars[key]["Continuous"]:
+				if value <= self.vars[key]["Values"][-1]:
+					self.vars[key]["Values"][0] = value
+			else:
+				index = self.vars[key]["Values"].index(value)
+				self.vars[key]["Values"] = self.vars[key]["Values"][index:]
+				
+			self.update(key)
+		
 		
 	def nrandomize(self, keys = None):
 		
@@ -133,7 +158,6 @@ class VariableMapper:
 		return values     
 		
 		
-
 	def denormalize(self, variables):
 		#print "Values to deMap = ", variables
 		values = {}
@@ -154,8 +178,7 @@ class VariableMapper:
 		#print "Result :", values
 		return values
 
-
-		
+	
 	def normalize(self, variables):
 		#print "Map ", variables
 		values = {}
@@ -170,10 +193,7 @@ class VariableMapper:
 
 
 	def __str__(self):
-		print "Mapping Interval", self.Interval
-		pprint(self.vars)
-		print
-		return str(self.vars)
+		return "\nMapping Interval %s\n%s" % (str(self.Interval), pformat(self.vars))
 		
 	def get_keys(self):
 		return self.vars.keys()
@@ -207,7 +227,8 @@ class VariableMapper:
 			if index < len(self.vars[key]["Values"]):
 				return self.vars[key]["Values"][index]
 		return None
-
+		
+	
 	def get_previous_value_from(self, key, value):
 		if self.vars[key]["Continuous"]:
 			if value - 1 >= self.vars[key]["Values"][0]:
@@ -217,6 +238,9 @@ class VariableMapper:
 			if index >= 0:
 				return self.vars[key]["Values"][index]
 		return None
+	
+	def get_maximum_value_of(self,key):		
+		return self.vars[key]["Values"][-1]
 
 
 	def get_values_range(self, key):
@@ -233,19 +257,79 @@ class VariableMapper:
 
 
 	def isvalid(self, key, value, constraint):
-		vals = self.vars[key]["Values"]
-		index = vals.index(constraint)
-		if type(value) == str:
-			if value in vals[:index + 1]:
-				return False
-		else:
-			if value <= constraint:
-				return False
+		if not self.vars[key]["Continuous"]:
+			vals = self.vars[key]["Values"]
+			index = vals.index(constraint)
+			if type(value) == str:
+				if value in vals[:index + 1]:
+					return False
+			else:
+				if value <= constraint:
+					return False
+		elif value <= constraint:
+			return False
 		return True
 				
+
+	def get_units(self, variables):
+		units = []
+		for key in variables:
+			units.append(self.vars[key]["unit"])
 			
+		return units
+	
+	def get_total_units(self, variables):
+		total_units = []
+		for key in variables:
+			if self.vars[key]["Continuous"]:
+				total_units.append((self.vars[key]["Values"][-1] - self.vars[key]["Values"][0]) / self.vars[key]["step"])
+			else:
+				total_units.append(len(self.vars[key]["Values"]))
+		return total_units
+	
+		
+		
+class ConfigurationMapper:
+	def __init__(self, keys, mapper):
+		print "================  Configuration Mapper  ==================="
+		self.keys = keys
+		self.mapper = mapper
+		self.neighborhood_radius = self._get_neighborhood_size(keys)
+		print "Neighborhood Radius == > ", self.neighborhood_radius
+		print "==========================================================="
+		self.units = self.mapper.get_units(keys)
+		
+	def reduce_space(self, constraints):
+		self.mapper.limit(constraints)
+		self.neighborhood_radius = self._get_neighborhood_size(self.keys)
+		self.units = self.mapper.get_units(self.keys)
+		
+		
+	def convert(self, x):
+		mapped_conf = {}
+		for i in range(len(x)):
+			mapped_conf[self.keys[i]] = x[i]
+		configuration =  self.mapper.denormalize(mapped_conf)
+		return configuration
+			
+			
+	def already_tested(self, x, confs):
+		#"Check if configuration has already been discovered."		
+		conf  = self.convert(x)		
+		if conf in confs:
+			return True
+		else:
+			return False
 
-
+	def _get_neighborhood_size(self, keys):
+		total_units = self.mapper.get_total_units(keys)
+		print "~~ Mapper ~~:", str(self.mapper)
+		print "Keys :", keys
+		print "Total units", zip(keys,total_units)
+		#set neighborhood size with a 10%  + 1 radius of the total interval
+		return map(lambda tu: int(tu *10./100.)  + 1, total_units)
+		
+	
 if __name__ == "__main__":
 	d = {
                     "Var": "%master_mem",

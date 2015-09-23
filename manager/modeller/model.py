@@ -40,14 +40,14 @@ class FunctModel:
 		
 		popt = params["F"]
 		
-		m.F = (self.FORM[self.Fcode], popt)
+		self.F = (self.FORM[self.Fcode], popt)
 		
 			
 	def save_state(self):
 		if self.F == None:
 			return None
 		params = {}
-		params["F"] = self.F[1]
+		params["F"] = list(self.F[1])
 		params ["Fcode"] = self.Fcode
 		params["R_square"] = self.R_square
 		
@@ -107,11 +107,12 @@ class FunctModel:
 					i = i + 1
 				continue
 			skip = 0
-						
-			r_2 = r2_score(y_true, y_pred)
-			
+			try:			
+				r_2 = r2_score(y_true, y_pred)
+			except:
+				r_2 = None
 			#keep the one that fits training data the best
-			if r_square == None or r_2 > r_square:
+			if r_2 != None and (r_square == None or r_2 > r_square):
 				r_square = r_2
 				best_model = model
 				fcode = i

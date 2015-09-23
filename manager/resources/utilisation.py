@@ -23,7 +23,9 @@ class UtilizationDataThread(threading.Thread):
 		#try:
 		while self.Enabled:
 			time.sleep(self.interval)
-			self.data.append(self.function(self.addresses))
+			usage = self.function(self.addresses)
+			if usage != None:
+				self.data.append(usage)
 		#except:
 		#    self.Enabled = False
 
@@ -49,12 +51,17 @@ class Monitor:
 	def __get_utilization(self, addresses):
 		info = {}
 		for address in addresses:
-			d, response = httplib2.Http().request('http://%s:9292' % address,
+			try:
+				d, response = httplib2.Http().request('http://%s:9292' % address,
 						 'POST',
 						 None,
 						 headers={'Content-Type': 'application/json'})
-			#print response
-			info[address] = eval(response)
+				#print response
+				info[address] = eval(response)
+			except:
+				continue
+		if info == {}:
+			return None
 		return info
 		
 	def run(self):
@@ -79,9 +86,36 @@ class Monitor:
 		#restore stdout
 		sys.stdout = backup
 		#done
-
 	
-	def process_usage(self, data = []):
+	def calculate_direction(self, result):
+		#print "\n~~~~~~~~~~~~~~ Monitoring result ~~~~~~~~~~~~~",
+		#for addr in result:
+		#	print addr
+		#	for k in result[addr]:
+		#		print  k, result[addr][k],		
+	
+		def __smaller(vals, v):
+			i = 0
+			while i < len(vals) and vals[i] <= v:
+				i += 1
+			return i
+		recommendation = {}
+		#get if resource needs to be increased or not
+		for addr in result:
+			recommendation[addr] = {}
+			for attr in result[addr]:
+				 vals = result[addr][attr][:]
+				 vals = sorted(vals)
+				 if __smaller(vals, self.UNDERUSED) * 100.0 / len(vals) > 50:
+					 recommendation[addr][attr] = -1
+				 elif (len(vals) - __smaller(vals, self.OVERUSED)) * 100.0 / len(vals) > 50:
+					 recommendation[addr][attr] = +1
+				 else:
+					 recommendation[addr][attr] = 0
+		print "\nDirection :", recommendation
+		return recommendation
+	
+	def process_usage(self, data = None):
 		result = {}
 		
 		if not self.retriever:
@@ -112,33 +146,7 @@ class Monitor:
 				for attr in record[addr]:
 					result[addr][attr].append(record[addr][attr])
 				
-		#print "\n~~~~~~~~~~~~~~ Monitoring result ~~~~~~~~~~~~~",
-		#for addr in result:
-		#	print addr
-		#	for k in result[addr]:
-		#		print  k, result[addr][k],		
-	
-		def __smaller(vals, v):
-			i = 0
-			while i < len(vals) and vals[i] <= v:
-				i += 1
-			return i
-		
-		
-		recommendation = {}
-		#get if resource needs to be increased or not
-		for addr in result:
-			recommendation[addr] = {}
-			for attr in result[addr]:
-				 vals = result[addr][attr][:]
-				 vals = sorted(vals)
-				 if __smaller(vals, self.UNDERUSED) * 100.0 / len(vals) > 50:
-					 recommendation[addr][attr] = -1
-				 elif (len(vals) - __smaller(vals, self.OVERUSED)) * 100.0 / len(vals) > 50:
-					 recommendation[addr][attr] = +1
-				 else:
-					 recommendation[addr][attr] = 0
-		print "\nDirection :", recommendation
+		recommendation  = self.calculate_direction(result)
 		
 		"""
 		monitor = {
@@ -185,17 +193,22 @@ class Monitor:
 			botneck[addr] = {}
 			for attr in res_attrs:#data["utilisation"][addr]:
 				vals = data["utilisation"][addr][attr][:]
-
-				i = len(vals) - 1
-				counter = 0
-				while i > 0 and vals[i] > 90:
-					counter += 1
-					i -= 1
-				#if the last 10 utilisation values > 90% ====> it may be a bottleneck causing failure
-				if counter > 10 or (len(vals) < 10 and counter > 3):
+				#check if there are high utilisation values/outliers in the last recording	
+				values = vals[-15:]
+						
+				if (sum(values)/len(values) >= 90):
 					botneck[addr][attr] = True
 				else:
-					botneck[addr][attr] = False
+					n = len(values)
+					dist = map(lambda i : values[i + 1] - values[i], range(n - 1))
+					
+					if max(dist) >= 30:
+						#there was a high sudden increase
+						botneck[addr][attr] = True
+					elif max(values) >= 90:
+						botneck[addr][attr] = True
+					else:
+						botneck[addr][attr] = False
 		return botneck
 	
 				

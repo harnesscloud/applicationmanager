@@ -129,27 +129,42 @@ class Group(Base):
 			num = self.NumInstances.Value
 		return num
 	
-class Distance(Base):
-    accepted_params = [ 
-            { 
-            'name' : 'Source', 
-            'type' : str, 
-            'is_array' : False, 
-            'is_required' : True
-            }, 
+class Constraint(Base):
+	accepted_params = [ 
 			{ 
-            'name' : 'Target', 
-            'type' : str, 
-            'is_array' : False, 
-            'is_required' : True
-            }, 
-            { 
-            'name' : 'Constraints',
-            'type' : str,
-            'is_array' : True,
-            'is_required' : True
-            }
-	]   
+			'name' : 'Source', 
+			'type' : str, 
+			'is_array' : False, 
+			'is_required' : True
+			}, 
+			{ 
+			'name' : 'Target', 
+			'type' : str, 
+			'is_array' : False, 
+			'is_required' : True
+			}, 
+			{ 
+			'name' : 'ConstraintType',
+			'type' : str,
+			'is_array' : False,
+			'is_required' : True
+			}
+	]
+	def __init__(self, hashmap = {}):
+		try:
+			self.Source = hashmap["Source"]
+			self.Target = hashmap["Target"]
+			self.ConstraintType = hashmap["ConstraintType"]
+		except:
+			raise Exception("Missing Source, Target or ConstraintType from Constraints field.")
+			
+
+		remaining_keys = filter(lambda x:not (x in ["Source", "Target", "ConstraintType"]), hashmap.keys())
+
+		for key in remaining_keys:
+			print "Processing ", key," = ", hashmap[key]
+			self.__dict__[key] = Variable(hashmap[key])
+
 
 
 class Resources(Base):    
@@ -161,8 +176,8 @@ class Resources(Base):
 			'is_required' : True
 			}, 
 			{ 
-			'name' : 'Distances',
-			'type' : Distance,
+			'name' : 'Constraints',
+			'type' : Constraint,
 			'is_array' : True,
 			'is_required' : False
 			}
@@ -183,6 +198,9 @@ class Resources(Base):
 		
 		for group in self.Groups:
 			d.update(group.get_var2key_map())
+			
+		for constr in self.Constraints:
+			d.update(constr.get_var2key_map())
 		return d
 
 

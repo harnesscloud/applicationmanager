@@ -37,7 +37,7 @@ class RemoteConnection:
 			f = script.split("/")[-1]
 			cmd_to_execute = cmd_to_execute + ";" + ";".join(["wget %s" % script, "chmod +x %s" % f, ". %s" % f])
 		cmd_to_execute = cmd_to_execute.strip(";")
-		#print "Executing :", cmd_to_execute, " on ", host
+		print "Executing :", cmd_to_execute, " on ", host
 		ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
 		output = "\nERROR: ["
 		output += ssh_stderr.read()

@@ -20,7 +20,6 @@ from manager.modeller.extrapolator import Extrapolator
 from manager.selection import SLOEnforcer
 from manager.application.search_space import VariableMapper
 from manager.state import State
-
 import  subprocess, traceback
 
 class Controller:
@@ -32,7 +31,7 @@ class Controller:
 		Controller.slo = SLOParser.parse(slo)		
 		
 		Controller.application = ManifestParser.load(Controller.slo.ManifestURL)
-		#print application.getVariableMap()		
+		#print Controller.application.getVariableMap()		
 		Controller.versions = Controller.application.generate_app_versions()
 		
 	@staticmethod 
@@ -44,8 +43,7 @@ class Controller:
 			enforcer = SLOEnforcer(Controller.application, Controller.slo, Controller.versions, models)
 			print "Enforce objective ..."
 			result = enforcer.execute_application()
-			print "Achievement (+ for slower/more expensive than predicted, - for faster/cheaper  than predicted) : ET = ", result[0], " COST = ", result[1]
-			
+			return result
 		print "Bye!"		
 	@staticmethod 
 	def model_application():
@@ -96,10 +94,17 @@ class Controller:
 			#profiling variable input
 			#modelling state - use function to predict
 			Extrapolator.StateID = current_state
-			variables, solutions_identified_in_profiling = Profiler(Controller.application, version).get_explored_solutions()
+			variables, solutions_identified_in_profiling, constraints = Profiler(Controller.application, version).get_explored_solutions()
 			
-			print len(solutions_identified_in_profiling)
-			
+			print constraints
+			#print map(lambda c:(c["cost"], c["et"]), solutions_identified_in_profiling[0]["Configurations"])
+			for c in solutions_identified_in_profiling[0]["Configurations"]:
+				print c["conf"], c["success"], c["et"],
+				if c["success"]:
+					print c["cost"]
+				else:
+					print "0"
+				
 			modeller = Extrapolator(Controller.application, version, variables, solutions_identified_in_profiling, input_size)
 			try:
 				modeller.run()
@@ -116,14 +121,14 @@ class Controller:
 		model = modeller.get_model() 
 		return True, model
 			
-			
-if len(sys.argv) > 1:
-	s = sys.argv[1]
-else:
-	print "./controller <url-to-slo>"
-	sys.exit()
+if __name__ == "__main__":	
 	
-Controller.load(s)
-Controller.run()
+	if len(sys.argv) > 1:
+		s = sys.argv[1]
+	else:
+		s = "http://public.rennes.grid5000.fr/~aiordache/harness/apps/rtm/slo.json"
+		
+	Controller.load(s)
+	Controller.run()
 
 
