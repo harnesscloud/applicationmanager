@@ -70,8 +70,10 @@ class Application(Base):
 			
 		for i in range(len(version)):
 			selected_implementation = version[i]
+			num_instances_per_group = self.Modules[i].Implementations[selected_implementation].Resources.get_num_instances(variables)
+			machines = configuration[:sum(num_instances_per_group)]
 			#cleanup will also check if the execution was successful 
-			self.Modules[i].Implementations[selected_implementation].cleanup(variables)
+			self.Modules[i].Implementations[selected_implementation].cleanup(machines, variables)
 			
 		if runtimes == []:
 			raise Exception("No module executed.")
@@ -94,15 +96,10 @@ class Application(Base):
 		roles = []
 		for i in range(len(version)):
 			selected_implementation = version[i]
-			subconf, role = self.Modules[i].Implementations[selected_implementation].Resources.get_configuration(variables)
-			# for dev in subconf:
-			# 	if dev['Type'] == 'Machine':
-			# 		dev['Attributes']['Image'] = config_parser.get("main", "agent_image")
-			# print "DEBUG: subconf: %s" % (subconf)	
+			subconf, role, constraints = self.Modules[i].Implementations[selected_implementation].Resources.get_configuration(variables)
 			configuration.extend(subconf)
 			roles.extend(role)
-		# print "DEBUG: configuration: %s, roles: %s" % (configuration,roles)
-		return (configuration, roles)
+		return (roles, configuration, constraints)
 		
 	
 	def get_Vars(self, version = []):

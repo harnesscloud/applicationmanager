@@ -16,46 +16,14 @@ class SLOEnforcer:
 		self.slo = slo
 		self.versions = versions
 		self.models = models
-		
-		self.Data = {}
-		
-		self.restore()
-		
-	def restore(self):
-		if self.Data == {}:
-			#load state
-			for v in self.versions:
-				version = ".".join(map(lambda s: str(s), v))
-				data = State.get_data(version, self.StateID)
-				if data in [None, {}, []]:
-					continue					
-				self.Data[version] = data[0]
-				
-			
-	def save_state(self):
-		print "Save state to file...",
-		for v in self.versions:
-			version = ".".join(map(lambda s: str(s), v))
-			#don't care, replace it
-			#data = State.get_data(self.version, self.StateID)		
-			info = {
-					"Input" : self.application.getExecutionParameters(self.slo.ExecutionArguments),
-					"Data"   : self.Data[version]
-					}
-			#print "info to save :", info
-			#State.checkpoint(version, self.StateID, [info])
-		print "Done"
+		print models
 		
 	def execute_application(self):
+		print "\n\n~~~~~~~~~~~~~~~~~~~~~~ SLO VALIDATION PHASE ~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"
 		parameters = self.application.getExecutionParameters(self.slo.ExecutionArguments)
 		#predict performance on untested configurations
-		if self.Data == {}:
-			info = self._predict_performance(parameters)
-			self.Data = copy.deepcopy(info)
-			self.save_state()
-			
-		info = self.Data
-			
+		info = self._predict_performance(parameters)
+					
 		best_confs = self._select_best(info)
 		
 		def minimize_objective(target, best_confs):
@@ -91,13 +59,15 @@ class SLOEnforcer:
 		
 		variable_order = bestest[1]["conf"].keys()
 		configuration = bestest[1]["conf"]
-		
+		print "\n\n======================= RESULTS ==========================="
 		print "Best Version :", bestest[0]
 		print "Best Configuration :", bestest[1]
+		print "===========================================================\n\n"
 		
-		success, conf, cost, execution_time, gradient, utilisation = Executor.execute_on_configuration(self.application, map(lambda x: int(x), bestest[0].split(".")), variable_order,  configuration, parameters)
-		print "Done"
-		return (execution_time - bestest[1]["et"], cost - bestest[1]["cost"])
+		#Uncomment here to run the final execution according to the slo
+		#success, conf, cost, execution_time, gradient, utilisation = Executor.execute_on_configuration(self.application, map(lambda x: int(x), bestest[0].split(".")), variable_order,  configuration, parameters)
+		#print "Done"
+		return {"Version" : bestest[0], "Configuration" : bestest[1]}
 		
 
 	def _predict_performance(self, parameters):
@@ -105,9 +75,9 @@ class SLOEnforcer:
 		for v in self.versions:
 			version = ".".join(map(lambda s: str(s), v))
 			
-			variables, solutions_identified_in_profiling = Profiler(self.application, version).get_explored_solutions()
+			variables, solutions_identified_in_profiling, constraints = Profiler(self.application, version).get_explored_solutions()
 			modeller = Extrapolator(self.application, version, variables, solutions_identified_in_profiling, parameters)
-			print "\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"
+			
 			solutions_benchmark_input, solutions_current_input = modeller.get_explored_solutions()
 			
 			info[version] = {
@@ -115,7 +85,16 @@ class SLOEnforcer:
 								"InputCurrent"  :  map(lambda x: { "conf" : x["conf"], "et" : x["et"], "tested"  :True }, solutions_current_input),
 								"Variable_order" : variables
 							}
-							
+			
+			print "\n\n------------------  CONFIGURATIONS  ----------------------\n"
+			print "~~~  Benchmarked  ~~~"
+			for c in solutions_benchmark_input:
+				print c["conf"]
+			
+			print "~~~  Extrapolated ~~~"
+			for c in solutions_current_input:
+				print c["conf"]
+			print "\n--------------------------------------------------------------\n"
 			if len(info[version]["InputProfiled"]) > len(info[version]["InputCurrent"]):
 				#get the mapper for the variables
 				mapper = VariableMapper(self.application.getResourceVariableMap(v))
@@ -162,7 +141,7 @@ class SLOEnforcer:
 			
 			#update the cost
 			for c in data:
-				conf, _  = self.application.getResourceConfiguration(version, c["conf"])
+				_, conf, _  = self.application.getResourceConfiguration(version, c["conf"])
 				print conf
 				
 				cost = CostModel.calculate(conf)

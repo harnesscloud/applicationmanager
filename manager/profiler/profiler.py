@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from manager.application.search_space import VariableMapper
+from manager.application.search_space import VariableMapper,ConfigurationMapper
 from manager.profiler.algorithms import SimulatedAnnealing, DirectedSimulatedAnnealing
 from manager.state import State
 from manager.executor import Executor
@@ -19,21 +19,21 @@ class Profiler:
 		
 		#print self.version_indexes
 		self.variables 	 = sorted(self.application.get_Resource_Vars(self.version_indexes))
-		
 		self.parameters = parameters
 		self.data        = None
 		
 		self.mapper = VariableMapper(self.application.getResourceVariableMap(self.version_indexes))
+		self.confMapper = ConfigurationMapper(self.variables, self.mapper)
+		
 		
 
-		self.strategy = DirectedSimulatedAnnealing(self.execute_application, len(self.variables), VariableMapper.Interval[0], VariableMapper.Interval[1], max_eval = self.iterations)
+		self.strategy = DirectedSimulatedAnnealing(self.execute_application, len(self.variables), VariableMapper.Interval[0], VariableMapper.Interval[1],  self.confMapper, max_eval = self.iterations)
 		data = self.restore()
 		if data == [] and self.parameters != {}:
 			#to init state
 			self.save_state()
 		
 	def restore(self):
-		print "Restoring Profile."
 		data = State.get_data(self.version, self.StateID)	
 		q = False		
 		for inputsize in data:
@@ -104,19 +104,16 @@ class Profiler:
 			
 		State.checkpoint(self.version, self.StateID, data)
 		
-		
 	def execute_application(self, x):
-		#print "m = ", self.mapper
-		mapped_variables = {}
-		for i in range(len(x)):
-			mapped_variables[self.variables[i]] = x[i]
-		variables =  self.mapper.denormalize(mapped_variables)
+		variables = self.confMapper.convert(x)
 		print self.variables
 		print variables
+		
 		result = Executor.execute_on_configuration(self.application, self.version_indexes, self.variables, variables, self.parameters)
 		#execute application should return the variables, cost and time of execution and feedback based on monitoring
 		return result #(success, variables, cost, execution_time, gradient, utilisation)
-					
+		
+	
 
 	def get_explored_solutions(self):
 		data = State.get_data(self.version, self.StateID)
@@ -129,7 +126,7 @@ class Profiler:
 		for info in data:			
 			solutions.append({"Input" : info["InputParameters"], "Configurations" : info["Algorithm"]["solutions"]})
 			
-		return self.variables, solutions
+		return self.variables, solutions, self.strategy.constraints
 		
 		
 

@@ -108,14 +108,13 @@ class Implementation(Base):
 		cmds = ["curl -O %s" % self.Tarball, "tar xzf %s" % self.Tarball.split("/")[-1]]
 		cmds.extend(["mkdir -p /var/cache/harness/;", "echo '%s' > /var/cache/harness/instances.json" % simplejson.dumps(instances)])
 
-		cmds.extend(["chmod +x init.sh", "chmod +x start.sh"])
+		cmds.extend(["chmod +x init.sh", "chmod +x start.sh", "chmod +x cleanup.sh"])
 
 		cmds.append(". init.sh %s" % (self.__process_args(self.DeploymentArgs, variables)))
 		
 		print "Running cmd on all machines :", cmds
 		
 		for cmd in cmds:
-			print
 			print "Running cmd %s" %cmd
 			for machine in machines:
 				conn.run(machine["Address"], cmd)
@@ -127,8 +126,31 @@ class Implementation(Base):
 			
 		print "Deployment finished."
 
-	def cleanup(self, machines):
-		pass
+	def cleanup(self, machines, variables):
+		print "....... Cleanup ......."
+		env_vars = self.__process_environ_vars(machines, variables)
+		
+		#don't want to see experiments trace in the output
+		#redirect to null 
+		backup = sys.stdout
+		sys.stdout = open(os.devnull, 'w')
+		
+		conn = RemoteConnection(environ_vars = env_vars)
+		#print "Run deployment scripts."    
+		#general cmds
+
+		cmd = ". cleanup.sh"
+		
+		print "Running %s on all machines." % cmd
+		for machine in machines:
+			conn.run(machine["Address"], cmd)
+				
+		time.sleep(1)
+		
+		#restore stdout    
+		sys.stdout = backup
+			
+		print "Done."
 		
 	def execute(self, machines, variables):
 		env_vars = self.__process_environ_vars(machines, variables)
@@ -139,19 +161,21 @@ class Implementation(Base):
 		
 		#don't want to see experiments trace in the output
 		#redirect to null 
-		backup = sys.stdout
-		sys.stdout = open(os.devnull, 'w')
+		#backup = sys.stdout
+		#sys.stdout = open(os.devnull, 'w')
 		
-		
-		cmd = ". start.sh %s" % self.__process_args(self.ExecutionArgs, variables)
+		args = self.__process_args(self.ExecutionArgs, variables)
+		print "Execution arguments:",args
+		cmd = "./start.sh %s" % args		
 		success  = []
 		StartTime = time.time()
 		for machine in machines:
-			exit_code, _ = conn.run(machine["Address"], cmd)
+			exit_code, output = conn.run(machine["Address"], cmd)
+			print "output : ", output
 			success.append(exit_code)
 		EndTime = time.time()
 		#restore stdout    
-		sys.stdout = backup
+		#sys.stdout = backup
 		
-		print "Execution finished."
+		print "Execution finished. Exit codes :", success
 		return (sum(success) ,(EndTime - StartTime)) 

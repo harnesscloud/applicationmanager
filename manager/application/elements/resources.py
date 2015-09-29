@@ -42,7 +42,7 @@ class Attributes(Base):
 class Group(Base):
 	accepted_params = [ 
 			{ 
-			'name' : 'GroupID', 
+			'name' : 'Group', 
 			'type' : str, 
 			'is_array' : False, 
 			'is_required' : True
@@ -129,27 +129,74 @@ class Group(Base):
 			num = self.NumInstances.Value
 		return num
 	
-class Distance(Base):
-    accepted_params = [ 
-            { 
-            'name' : 'Source', 
-            'type' : str, 
-            'is_array' : False, 
-            'is_required' : True
-            }, 
+class Constraint(Base):
+	accepted_params = [ 
 			{ 
-            'name' : 'Target', 
-            'type' : str, 
-            'is_array' : False, 
-            'is_required' : True
-            }, 
-            { 
-            'name' : 'Constraints',
-            'type' : str,
-            'is_array' : True,
-            'is_required' : True
-            }
-	]   
+			'name' : 'Source', 
+			'type' : str, 
+			'is_array' : False, 
+			'is_required' : True
+			}, 
+			{ 
+			'name' : 'Target', 
+			'type' : str, 
+			'is_array' : False, 
+			'is_required' : True
+			}, 
+			{ 
+			'name' : 'ConstraintType',
+			'type' : str,
+			'is_array' : False,
+			'is_required' : True
+			}
+	]
+	def __init__(self, hashmap = {}):
+		try:
+			self.Source = hashmap["Source"]
+			self.Target = hashmap["Target"]
+			self.ConstraintType = hashmap["ConstraintType"]
+		except:
+			raise Exception("Missing Source, Target or ConstraintType from Constraints field.")
+			
+
+		remaining_keys = filter(lambda x:not (x in ["Source", "Target", "ConstraintType"]), hashmap.keys())
+
+		for key in remaining_keys:
+			print "Processing ", key," = ", hashmap[key]
+			try:
+				self.__dict__[key] = Variable(hashmap[key])
+			except:
+				self.__dict__[key] = hashmap[key]
+	def get_var2key_map(self):      
+		result = {}
+		for key in self.__dict__:
+			item = self.__dict__[key]
+			if issubclass(item.__class__, Variable) or isinstance(item, Variable):
+				iid = item.get_id()
+				if iid:
+					result[iid] = str(key)
+			else:
+				result[key] = item
+
+		return result
+
+	def get_configuration(self, variables):
+		"""
+			returns its JSON description
+		""" 
+		result = {}
+		for key in self.__dict__:
+			item = self.__dict__[key]
+			if issubclass(item.__class__, Variable) or isinstance(item, Variable):
+				iid = item.get_id()
+				if iid and iid in variables.keys():
+					result[key] = variables[iid]
+			else:
+				result[key] = item
+
+		return result
+
+
 
 
 class Resources(Base):    
@@ -161,8 +208,8 @@ class Resources(Base):
 			'is_required' : True
 			}, 
 			{ 
-			'name' : 'Distances',
-			'type' : Distance,
+			'name' : 'Constraints',
+			'type' : Constraint,
 			'is_array' : True,
 			'is_required' : False
 			}
@@ -170,7 +217,7 @@ class Resources(Base):
 	
 	def get_group_vars(self, groupid):
 		for gr in self.Groups:
-			if gr.GroupID == groupid:
+			if gr.Group == groupid:
 				return gr.get_Vars()			
 	
 	
@@ -183,19 +230,24 @@ class Resources(Base):
 		
 		for group in self.Groups:
 			d.update(group.get_var2key_map())
+			
+		for constr in self.Constraints:
+			d.update(constr.get_var2key_map())
 		return d
 
 
 	def get_configuration(self, variables):
 		configuration = []
 		roles = []
-		
+		constraints = []
 		for gr in self.Groups:
 			role, subconfig = gr.get_configuration(variables)
 			roles.extend(role)
 			configuration.extend(subconfig)
-			
-		return configuration, roles
+		
+		for constr in self.Constraints:
+			constraints.append(constr.get_configuration(variables))
+		return configuration, roles, constraints
 			
 
 	def get_num_instances(self, variables):

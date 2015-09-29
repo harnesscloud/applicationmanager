@@ -83,9 +83,10 @@ class CrossResourceSchedulerConnection(SingletonParent):
         return response
     
     
-    def createReservation(self, configuration, monitor):
+    def createReservation(self, configuration, constraints,  monitor):
         data = {}
         data['Allocation'] = configuration
+        data['Constraints'] = constraints
         if len(monitor) > 0:
         	data['Monitor'] = monitor
 
@@ -116,14 +117,14 @@ class CrossResourceSchedulerConnection(SingletonParent):
 class ReservationManager:
     
 	@staticmethod
-	def reserve(configuration, monitor):
+	def reserve(configuration, constraints,  monitor):
 		"Reserve resource configuration."
 		conf_copy  = copy.deepcopy(configuration)
 		for dev in conf_copy:
 			if dev['Type'] == 'Machine':
 				dev['Attributes']['Image'] = config_parser.get("main", "agent_image")
 
-		reservationID = ReservationManager.__create_reservation(conf_copy, monitor)  
+		reservationID = ReservationManager.__create_reservation(conf_copy, constraints, monitor)  
 		addresses = ReservationManager.__check_reservation(reservationID)
 		
 		# print "Sleep 3s while machines are booting."
@@ -155,9 +156,9 @@ class ReservationManager:
 
 
 	@staticmethod
-	def __create_reservation(configuration, monitor):
+	def __create_reservation(configuration, constraints, monitor):
 		provisioner = CrossResourceSchedulerConnection()
-		result = provisioner.createReservation(configuration, monitor)
+		result = provisioner.createReservation(configuration, constraints, monitor)
 		if result == None:
 			raise Exception()
 		return result
@@ -197,7 +198,7 @@ if __name__ == "__main__":
 	sys.exit()
 	res = ReservationManager.reserve(
 	   [
-		  {"GroupID":"id0",
+		  {"Group":"id0",
 			 "Type":"Machine",
 			 "NumInstances":3,
 			 "Attributes":{
