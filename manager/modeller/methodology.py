@@ -226,10 +226,6 @@ class ModellingMethod:
 		else:
 			self.failed_set.append(solution({"conf" : conf_to_test, "x" : None, "cost" : cost, "et" : et, "gradient" : direction, "monitor" : monitor, "success" : success["Success"]}))
 			
-			######## HACK FOR WP 7 ##########
-			self.iterations += 1
-			return 1
-			#################################
 			bottlenecks = success["Bottleneck"]
 			print "Looking for bottlenecks"
 			#look for a working configuration 
