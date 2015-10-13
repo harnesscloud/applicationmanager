@@ -23,7 +23,7 @@ class Executor:
         else:
             recommendation = monitor.get_recommendation(feedback["utilisation"])
             utilisation = feedback
-            bottlenecks = monitor.get_bottleneck(utilisation)
+        bottlenecks = monitor.get_bottleneck(utilisation)
 
         #regroup and assign recommendation to variables
         variable_keys = application.getResourceVar2KeyMap(version_indexes)
