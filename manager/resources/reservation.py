@@ -50,16 +50,16 @@ class SingletonParent(object):
         # Critical section end
 
         return cls.__instance
-        
-        
-        
-    
+
+
+
+
 class CrossResourceSchedulerConnection(SingletonParent):
     def __init__(self, url = config_parser.get("main", "crs_url")): #for development use the 2nd CRS instance, the first is running profiling
         SingletonParent.__init__(self)
         self.conn = httplib2.Http()
-        self.url = url 
-        
+        self.url = url
+
     def __make_request(self, url, method = 'POST', content = {}):
         #print "Conn ID =", id(self)
         #print "\nRequest :", url, content
@@ -73,16 +73,16 @@ class CrossResourceSchedulerConnection(SingletonParent):
             	raise Exception(response['error']['message'])
             else:
             	response = response['result']
-            	
+
         except:
             print traceback.print_exc()
             sys.exit()
             # return response
-        
+
         #print "Response :", response
         return response
-    
-    
+
+
     def createReservation(self, configuration, constraints,  monitor):
         data = {}
         data['Allocation'] = configuration
@@ -98,15 +98,18 @@ class CrossResourceSchedulerConnection(SingletonParent):
         response = self.__make_request("/releaseReservation",method="DELETE", content={"ReservationID" : [reservationID]})
         if response is {}:
             return True
-    
+
     def checkReservation(self, reservationID):
         response = self.__make_request("/checkReservation", content={"ReservationID" : [reservationID]})
         return response
-    
+
     def getMetrics(self, reservationID, address, entry=1):
     	response = self.__make_request("/getMetrics", content={"ReservationID" : reservationID, "Address":address, "Entry":entry})
         return response
-        
+    def getCost(self, configuration):
+        response = self.__make_request("/getCost", content={"Configurations" : [configuration]})
+        return response[0]
+
     #for development only
     def reset(self):
         response = self.__make_request("/reset")
@@ -115,64 +118,56 @@ class CrossResourceSchedulerConnection(SingletonParent):
 
 
 class ReservationManager:
-    
-	@staticmethod
-	def reserve(configuration, constraints,  monitor):
-		"Reserve resource configuration."
-		conf_copy  = copy.deepcopy(configuration)
-		for dev in conf_copy:
-			if dev['Type'] == 'Machine':
-				dev['Attributes']['Image'] = config_parser.get("main", "agent_image")
+    @staticmethod
+    def reserve(configuration, constraints,  monitor):
+        "Reserve resource configuration."
+        conf_copy  = copy.deepcopy(configuration)
+        for dev in conf_copy:
+            if dev['Type'] == 'Machine':
+                dev['Attributes']['Image'] = config_parser.get("main", "agent_image")
 
-		reservationID = ReservationManager.__create_reservation(conf_copy, constraints, monitor)  
-		addresses = ReservationManager.__check_reservation(reservationID)
-		
-		# print "Sleep 3s while machines are booting."
-		# time.sleep(3)	
-		return {"ReservationID" : reservationID, "Addresses" : addresses}
+        reservationID = ReservationManager.__create_reservation(conf_copy, constraints, monitor)
+        addresses = ReservationManager.__check_reservation(reservationID)
+        print "Sleep 3s while machines are booting."
+        time.sleep(3)
+        return {"ReservationID" : reservationID, "Addresses" : addresses}
 
-	@staticmethod
-	def release(reservationID):
-		"""
-			Release the reservation
-		"""
-		print "Releasing resources..."
-		provisioner = CrossResourceSchedulerConnection()
-		provisioner.releaseReservation(reservationID)
+    @staticmethod
+    def release(reservationID):
+        """	Release the reservation """
+        print "Releasing resources..."
+        provisioner = CrossResourceSchedulerConnection()
+        provisioner.releaseReservation(reservationID)
 
+    @staticmethod
+    def reset():
+        provisioner = CrossResourceSchedulerConnection()
+        provisioner.reset()
 
-	@staticmethod
-	def reset():
-		provisioner = CrossResourceSchedulerConnection()
-		provisioner.reset()
+    @staticmethod
+    def monitor(reservationID, address):
+        provisioner = CrossResourceSchedulerConnection()
+        result = provisioner.getMetrics(reservationID, address)
+        if result == None:
+            raise Exception()
+        return result['Metrics']
 
-	@staticmethod
-	def monitor(reservationID, address):
-		provisioner = CrossResourceSchedulerConnection()
-		result = provisioner.getMetrics(reservationID, address)
-		if result == None:
-			raise Exception()
-		return result['Metrics']	
-
-
-	@staticmethod
-	def __create_reservation(configuration, constraints, monitor):
-		provisioner = CrossResourceSchedulerConnection()
-		result = provisioner.createReservation(configuration, constraints, monitor)
-		if result == None:
-			raise Exception()
-		return result
+    @staticmethod
+    def __create_reservation(configuration, constraints, monitor):
+        provisioner = CrossResourceSchedulerConnection()
+        result = provisioner.createReservation(configuration, constraints, monitor)
+        if result == None:
+            raise Exception()
+        return result
 
 
-	@staticmethod
-	def __check_reservation(reservationID):
-		
-		provisioner = CrossResourceSchedulerConnection()
-		ready = False
-		while not ready:	
-			result = provisioner.checkReservation(reservationID)
-			ready = result["Instances"][reservationID]["Ready"]
-			
+    @staticmethod
+    def __check_reservation(reservationID):
+        provisioner = CrossResourceSchedulerConnection()
+        ready = False
+        while not ready:
+            result = provisioner.checkReservation(reservationID)
+            ready = result["Instances"][reservationID]["Ready"]
 		#{
 		#	"Instances": {
 		#		"resID1": {
@@ -180,20 +175,25 @@ class ReservationManager:
 		#			"Address": [
 		#				"192.168.13.172",
 		#				"192.168.13.173",
-		#				"pbrpc://192.168.13.172/volume_name1" 
+		#				"pbrpc://192.168.13.172/volume_name1"
 		#			]
 		#		}
 		#	}
-		#}        
-		return result["Instances"][reservationID]["Address"]    
+		#}
+        return result["Instances"][reservationID]["Address"]
 
-			
+    @staticmethod
+    def get_cost(configuration, contraints):
+        provisioner = CrossResourceSchedulerConnection()
+        result = provisioner.getCost(configuration)
+        return result
+
 
 
 ##### TEST PURPOSE #####
 
 if __name__ == "__main__":
-	
+
 	ReservationManager.reset()
 	sys.exit()
 	res = ReservationManager.reserve(

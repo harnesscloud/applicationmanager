@@ -6,30 +6,30 @@ import time
 import paramiko
 from config import config_parser
 class RemoteConnection:
-    
+
     def __init__(self, environ_vars = {}):
         self.env_vars = environ_vars
-        paramiko.util.log_to_file('/tmp/am_ssh.log') 
-    
+        paramiko.util.log_to_file('/tmp/am_ssh.log')
+
     def run(self, host, cmd = None, script = None, user = config_parser.get("main", "agent_user")):
 		#output = None
 		ssh = paramiko.SSHClient()
 		ssh.load_system_host_keys()
 		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-		tries = 3;
-		#print "Connecting to ", host 
+		tries = 5;
+		#print "Connecting to ", host
 		while(tries > 0):
-			try:	
+			try:
 				ssh.connect(host, username = user, password = config_parser.get("main", "agent_password"))
 				print "Success"
 				break;
 			except:
 				tries = tries - 1;
 				print "Failed connecting to %s, try connecting later..." % host
-				time.sleep(10)
+				time.sleep(15)
 		if tries == 0:
 			raise Exception("couldn't connect to ",host)
-			
+
 		cmd_to_execute = ";".join(["export %s='%s'" % (key, self.env_vars[key]) for key in self.env_vars])
 		if cmd != None:
 			cmd_to_execute = cmd_to_execute + ";" + cmd
