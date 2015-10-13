@@ -41,7 +41,7 @@ class Attributes(Base):
         return result
 
 class Group(Base):
-	accepted_params = [
+    accepted_params = [
 			{
 			'name' : 'Group',
 			'type' : str,
@@ -72,63 +72,60 @@ class Group(Base):
 			'is_array' : False,
 			'is_required' : False
 			}
-		]
-	def __init__(self, hashmap = {}):
-		self.Role = "Worker"
-		if not("NumInstances" in hashmap):
-			self.NumInstances = Variable({"Value" : 1})
-		Base.__init__(self, hashmap)
+    ]
+    def __init__(self, hashmap = {}):
+        self.Role = "Worker"
+        if not("NumInstances" in hashmap):
+            hashmap["NumInstances"] = 1
+        Base.__init__(self, hashmap)
 
-	def get_var2key_map(self):
-		result = {}
-		for key in self.__dict__:
-			item = self.__dict__[key]
-			if issubclass(item.__class__, Variable) or isinstance(item, Variable):
-				iid = item.get_id()
-				if iid:
-					result[iid] = str(key)
-			elif key == "Attributes":
-				result.update(item.get_var2key_map())
+    def get_var2key_map(self):
+        result = {}
+        for key in self.__dict__:
+            item = self.__dict__[key]
+            if issubclass(item.__class__, Variable) or isinstance(item, Variable):
+                iid = item.get_id()
+                if iid:
+                    result[iid] = str(key)
+            elif key == "Attributes":
+                result.update(item.get_var2key_map())
+        return result
+    def get_configuration(self, variables):
+        """	returns its JSON description """
+        subconf = {}
+        for key in self.__dict__:
+            item = self.__dict__[key]
+            if key in ["NumInstances", "Role", "Super"]:
+                continue
+            if issubclass(item.__class__, Variable) or isinstance(item, Variable):
+                iid = item.get_id()
+                if iid:
+                    subconf[key] = variables[iid]
+                else:
+                    subconf[key] = item.Value
+            elif key == "Attributes":
+                subconf[key] = item.get(variables)
+            else:
+                subconf[key] = item
 
-		return result
+        num = self.get_num_instances(variables)
+        configuration = []
+        for i in range(num):
+            configuration.append(copy.deepcopy(subconf))
+        roles = [self.Role] * num
+        return roles, configuration
 
-	def get_configuration(self, variables):
-		"""
-			returns its JSON description
-		"""
-		subconf = {}
+    def get_num_instances(self, variables):
+        #extend NumInstances
+        #print self.NumInstances
+        num = self.NumInstances.get_id()
+        if num:
+            num = variables[num]
+        else:
+            num = self.NumInstances.Value
+        return num
 
-		for key in self.__dict__:
-			item = self.__dict__[key]
-			if key in ["NumInstances", "Role", "Super"]:
-				continue
-			if issubclass(item.__class__, Variable) or isinstance(item, Variable):
-				iid = item.get_id()
-				if iid:
-					subconf[key] = variables[iid]
-				else:
-					subconf[key] = item.Value
 
-			elif key == "Attributes":
-				subconf[key] = item.get(variables)
-			else:
-				subconf[key] = item
-
-		num = self.get_num_instances(variables)
-		configuration = []
-		for i in range(num):
-			configuration.append(copy.deepcopy(subconf))
-		roles = [self.Role] * num
-		return roles, configuration
-
-	def get_num_instances(self, variables):
-		#extend NumInstances
-		num = self.NumInstances.get_id()
-		if num:
-			num = variables[num]
-		else:
-			num = self.NumInstances.Value
-		return num
 
 class Constraint(Base):
     accepted_params = [
