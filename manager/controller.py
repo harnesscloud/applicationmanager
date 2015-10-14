@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import sys
+
+
 try:
     from manager.application.structure import Application
 except:
@@ -14,7 +16,7 @@ except:
 
 from manager.specification.manifest import ManifestParser
 from manager.specification.slo import SLOParser
-
+from manager.executor import Executor
 from manager.profiler.profiler import Profiler
 from manager.modeller.extrapolator import Extrapolator
 from manager.selection import SLOEnforcer
@@ -37,14 +39,8 @@ class Controller:
 		
 	@staticmethod 
 	def run():
-		done, models = Controller.model_application()
-		print "Modelling done?",done
-		if done:			
-			#application model has been built; enforce slo
-			enforcer = SLOEnforcer(Controller.application, Controller.slo, Controller.versions, models)
-			print "Enforce objective ..."
-			result = enforcer.execute_application()
-			return result
+	        Executor.execute_on_configuration(Controller.application, [0], [], {},
+ VariableMapper(Controller.application.getParameterVariableMap()).lower_bound_values())
 		print "Bye!"		
 	@staticmethod 
 	def model_application():

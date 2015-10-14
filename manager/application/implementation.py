@@ -68,23 +68,27 @@ class Implementation(Base):
         result = {}
         env_vars = self.EnvironmentVars
         for key in env_vars:
-            val = env_vars[key]
-            if val.startswith("address(") and val.endswith(")"):
-                keyword = val[8:]
-                keyword = keyword[:-1]
-                gather_info = []
-                for machine in machines:
-                    for k in machine:
-                        if machine[k] == keyword:
+            vars = env_vars[key]
+            result[key] = ""
+            values = vars.split(";")
+            for val in values:
+                if val.startswith("address(") and val.endswith(")"):
+                   keyword = val[8:]
+                   keyword = keyword[:-1]
+                   gather_info = []
+                   for machine in machines:
+                      for k in machine:
+                         if machine[k] == keyword:
                             gather_info.append(machine["Address"])
-
-                result[key] = ";".join(map(lambda item: str(item), gather_info))
-            else:
-                new_value = val
-                for v in variables:
-                    if v in new_value:
-                        new_value = new_value.replace(v, str(variables[v]))
-                result[key] = new_value
+                   result[key] = result[key] + ";".join(map(lambda item: str(item), gather_info)) + ";"
+                else:
+                   new_value = val
+                   for v in variables:
+                       if v in new_value:
+                           new_value = new_value.replace(v, str(variables[v]))
+                   result[key] = result[key] + new_value + ";"
+            if result[key].endswith(";"):
+               result[key] = result[key][:-1]    
         return result
 
 

@@ -62,7 +62,7 @@ class CrossResourceSchedulerConnection(SingletonParent):
 
     def __make_request(self, url, method = 'POST', content = {}):
         #print "Conn ID =", id(self)
-        #print "\nRequest :", url, content
+        print "\nURL :", self.url + url
         data, response = self.conn.request(self.url + url , method,
                           simplejson.dumps(content),
                           headers={'Content-Type': 'application/json'})
